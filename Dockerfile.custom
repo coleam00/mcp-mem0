@@ -1,0 +1,6 @@
+FROM mcp-mem0
+
+# Install the Ollama Python client library
+RUN pip install ollama
+
+CMD ["python", "-m", "src.main"]
