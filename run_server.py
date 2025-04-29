@@ -9,7 +9,7 @@ def main():
 
     # Get configuration from environment variables
     host = os.getenv('HOST', '0.0.0.0')
-    port = int(os.getenv('PORT', '8080'))
+    port = int(os.getenv('PORT', '9000'))  # Default to 9000 to match main config
 
     # Create FastMCP app
     app = FastMCP()

@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
-from mcp.server.fastmcp import FastMCP
 import uvicorn
+from mcp.server.fastmcp import FastMCP
 
 def main():
     # Load environment variables from .env file
@@ -9,14 +9,16 @@ def main():
 
     # Get configuration from environment variables
     host = os.getenv('HOST', '0.0.0.0')
-    port = int(os.getenv('PORT', '8080'))
+    port = int(os.getenv('PORT', '9000'))  # Default to 9000 to match main config
     transport = os.getenv('TRANSPORT', 'sse')
+    protocol = os.getenv('PROTOCOL', 'sse')
 
-    # Create FastMCP app
-    app = FastMCP()
+    mcp_instance = FastMCP(transport=transport, protocol=protocol)
 
-    # Run the server
-    print(f"Starting MCP server on {host}:{port} using {transport} transport")
+    # Use the sse_app attribute as the ASGI app
+    app = mcp_instance.sse_app
+
+    print(f"Starting MCP server on {host}:{port} using {transport} transport and {protocol} protocol")
     uvicorn.run(app, host=host, port=port)
 
 if __name__ == '__main__':
