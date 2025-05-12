@@ -1,9 +1,7 @@
 from mem0 import Memory
 import os
 
-# Custom instructions for memory processing
-# These aren't being used right now but Mem0 does support adding custom prompting
-# for handling memory retrieval and processing.
+# Custom instructions for memory processing (optional – currently unused)
 CUSTOM_INSTRUCTIONS = """
 Extract the Following Information:  
 
@@ -15,78 +13,77 @@ Extract the Following Information:
 """
 
 def get_mem0_client():
-    # Get LLM provider and configuration
+    # Get LLM provider and configuration from environment variables
     llm_provider = os.getenv('LLM_PROVIDER')
     llm_api_key = os.getenv('LLM_API_KEY')
     llm_model = os.getenv('LLM_CHOICE')
     embedding_model = os.getenv('EMBEDDING_MODEL_CHOICE')
-    
+    llm_base_url = os.getenv('LLM_BASE_URL')
+
     # Initialize config dictionary
     config = {}
-    
-    # Configure LLM based on provider
-    if llm_provider == 'openai' or llm_provider == 'openrouter':
+
+    # === LLM CONFIGURATION ===
+    if llm_provider in ['openai', 'openrouter']:
         config["llm"] = {
-            "provider": "openai",
+            "provider": llm_provider,
             "config": {
                 "model": llm_model,
                 "temperature": 0.2,
-                "max_tokens": 2000,
+                "max_tokens": 2000
             }
         }
-        
-        # Set API key in environment if not already set
-        if llm_api_key and not os.environ.get("OPENAI_API_KEY"):
-            os.environ["OPENAI_API_KEY"] = llm_api_key
-            
-        # For OpenRouter, set the specific API key
-        if llm_provider == 'openrouter' and llm_api_key:
-            os.environ["OPENROUTER_API_KEY"] = llm_api_key
-    
+
+        # Set base URL if provided (important for openrouter)
+        if llm_base_url:
+            config["llm"]["config"]["base_url"] = llm_base_url
+
+        # Set API key in environment
+        if llm_api_key:
+            if llm_provider == "openai":
+                os.environ["OPENAI_API_KEY"] = llm_api_key
+            elif llm_provider == "openrouter":
+                os.environ["OPENROUTER_API_KEY"] = llm_api_key
+
     elif llm_provider == 'ollama':
         config["llm"] = {
             "provider": "ollama",
             "config": {
                 "model": llm_model,
                 "temperature": 0.2,
-                "max_tokens": 2000,
+                "max_tokens": 2000
             }
         }
-        
-        # Set base URL for Ollama if provided
-        llm_base_url = os.getenv('LLM_BASE_URL')
+
         if llm_base_url:
             config["llm"]["config"]["ollama_base_url"] = llm_base_url
-    
-    # Configure embedder based on provider
+
+    # === EMBEDDER CONFIGURATION ===
     if llm_provider == 'openai':
         config["embedder"] = {
             "provider": "openai",
             "config": {
                 "model": embedding_model or "text-embedding-3-small",
-                "embedding_dims": 1536  # Default for text-embedding-3-small
+                "embedding_dims": 1536
             }
         }
-        
-        # Set API key in environment if not already set
-        if llm_api_key and not os.environ.get("OPENAI_API_KEY"):
+
+        if llm_api_key:
             os.environ["OPENAI_API_KEY"] = llm_api_key
-    
+
     elif llm_provider == 'ollama':
         config["embedder"] = {
             "provider": "ollama",
             "config": {
                 "model": embedding_model or "nomic-embed-text",
-                "embedding_dims": 768  # Default for nomic-embed-text
+                "embedding_dims": 768
             }
         }
-        
-        # Set base URL for Ollama if provided
-        embedding_base_url = os.getenv('LLM_BASE_URL')
-        if embedding_base_url:
-            config["embedder"]["config"]["ollama_base_url"] = embedding_base_url
-    
-    # Configure Supabase vector store
+
+        if llm_base_url:
+            config["embedder"]["config"]["ollama_base_url"] = llm_base_url
+
+    # === VECTOR STORE CONFIGURATION ===
     config["vector_store"] = {
         "provider": "supabase",
         "config": {
@@ -96,7 +93,8 @@ def get_mem0_client():
         }
     }
 
+    # (Optional) Add custom prompt for memory extraction
     # config["custom_fact_extraction_prompt"] = CUSTOM_INSTRUCTIONS
-    
+
     # Create and return the Memory client
     return Memory.from_config(config)
