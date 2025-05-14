@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/coleam00-mcp-mem0-badge.png)](https://mseep.ai/app/coleam00-mcp-mem0)
+
 <h1 align="center">MCP-Mem0: Long-Term Memory for AI Agents</h1>
 
 <p align="center">
