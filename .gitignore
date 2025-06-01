@@ -4,3 +4,6 @@ venv
 __pycache__
 mem0_mcp.egg-info
 .python-version
+
+# VS Code configuration files (may contain sensitive tokens)
+.vscode/
