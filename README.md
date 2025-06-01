@@ -16,11 +16,26 @@ The implementation follows the best practices laid out by Anthropic for building
 
 ## Features
 
-The server provides three essential memory management tools:
+The server provides comprehensive memory management tools with **dual provider support** for enhanced reliability:
 
-1. **`save_memory`**: Store any information in long-term memory with semantic indexing
-2. **`get_all_memories`**: Retrieve all stored memories for comprehensive context
-3. **`search_memories`**: Find relevant memories using semantic search
+### Core Memory Tools
+1. **`save_memory`**: Store information in long-term memory with dual provider redundancy and duplicate prevention
+2. **`get_all_memories`**: Retrieve all stored memories from both providers with intelligent deduplication
+3. **`search_memories`**: Find relevant memories using semantic search across both providers
+
+### Dual Provider Management
+4. **`check_provider_health`**: Monitor the health status of both primary and secondary providers
+5. **`sync_providers`**: Manually trigger synchronization between providers
+
+### Key Benefits
+- **🔄 Redundancy**: Memories are stored in two separate providers for fault tolerance
+- **⚡ Perfect Synchronization**: Both providers use the same model and embedding configurations
+- **🛡️ Failover Support**: Automatic fallback when one provider is unavailable
+- **🚫 Duplicate Prevention**: Smart detection prevents saving duplicate memories using content similarity
+- **🔍 Intelligent Deduplication**: Advanced algorithms merge results from both providers seamlessly
+- **⚙️ Conflict Prevention**: Separate vector collections prevent data conflicts
+- **📊 Health Monitoring**: Real-time status checking for both providers
+- **🔧 Graceful Error Handling**: Robust error handling with fail-safe mechanisms
 
 ## Prerequisites
 
@@ -67,6 +82,10 @@ The server provides three essential memory management tools:
 
 ## Configuration
 
+### Dual Provider Setup
+
+This server now supports dual provider configuration for enhanced reliability. Both providers use the same model and embedding configurations to ensure consistency.
+
 The following environment variables can be configured in your `.env` file:
 
 | Variable | Description | Example |
@@ -74,12 +93,30 @@ The following environment variables can be configured in your `.env` file:
 | `TRANSPORT` | Transport protocol (sse or stdio) | `sse` |
 | `HOST` | Host to bind to when using SSE transport | `0.0.0.0` |
 | `PORT` | Port to listen on when using SSE transport | `8050` |
+| `PRIMARY_LLM_PROVIDER` | Primary LLM provider (openai, openrouter, or ollama) | `openai` |
+| `PRIMARY_LLM_BASE_URL` | Base URL for the primary LLM API | `https://api.openai.com/v1` |
+| `PRIMARY_LLM_API_KEY` | API key for the primary LLM provider | `sk-...` |
+| `SECONDARY_LLM_PROVIDER` | Secondary LLM provider (openai, openrouter, or ollama) | `openrouter` |
+| `SECONDARY_LLM_BASE_URL` | Base URL for the secondary LLM API | `https://openrouter.ai/api/v1` |
+| `SECONDARY_LLM_API_KEY` | API key for the secondary LLM provider | `sk-...` |
+| `LLM_CHOICE` | LLM model to use (same for both providers) | `gpt-4o-mini` |
+| `EMBEDDING_MODEL_CHOICE` | Embedding model to use (same for both providers) | `text-embedding-3-small` |
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:port/db` |
+
+### Legacy Single Provider Configuration
+
+For backward compatibility, you can still use the old single provider configuration:
+
+| Variable | Description | Example |
+|----------|-------------|----------|
 | `LLM_PROVIDER` | LLM provider (openai, openrouter, or ollama) | `openai` |
 | `LLM_BASE_URL` | Base URL for the LLM API | `https://api.openai.com/v1` |
 | `LLM_API_KEY` | API key for the LLM provider | `sk-...` |
-| `LLM_CHOICE` | LLM model to use | `gpt-4o-mini` |
-| `EMBEDDING_MODEL_CHOICE` | Embedding model to use | `text-embedding-3-small` |
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:port/db` |
+
+**How Legacy Mode Works:**
+- If dual provider variables (`PRIMARY_*` and `SECONDARY_*`) are not configured, the system automatically falls back to legacy mode
+- In legacy mode, the same provider configuration is duplicated for both primary and secondary instances
+- This ensures backward compatibility with existing installations while still providing the dual provider architecture benefits
 
 ## Running the Server
 
@@ -151,6 +188,31 @@ Make sure to update the port if you are using a value other than the default 805
 
 Add this server to your MCP configuration for Claude Desktop, Windsurf, or any other MCP client:
 
+**Dual Provider Configuration:**
+```json
+{
+  "mcpServers": {
+    "mem0": {
+      "command": "your/path/to/mcp-mem0/.venv/Scripts/python.exe",
+      "args": ["your/path/to/mcp-mem0/src/main.py"],
+      "env": {
+        "TRANSPORT": "stdio",
+        "PRIMARY_LLM_PROVIDER": "openai",
+        "PRIMARY_LLM_BASE_URL": "https://api.openai.com/v1",
+        "PRIMARY_LLM_API_KEY": "YOUR-OPENAI-API-KEY",
+        "SECONDARY_LLM_PROVIDER": "openrouter",
+        "SECONDARY_LLM_BASE_URL": "https://openrouter.ai/api/v1",
+        "SECONDARY_LLM_API_KEY": "YOUR-OPENROUTER-API-KEY",
+        "LLM_CHOICE": "gpt-4o-mini",
+        "EMBEDDING_MODEL_CHOICE": "text-embedding-3-small",
+        "DATABASE_URL": "YOUR-DATABASE-URL"
+      }
+    }
+  }
+}
+```
+
+**Legacy Single Provider Configuration:**
 ```json
 {
   "mcpServers": {
@@ -173,6 +235,42 @@ Add this server to your MCP configuration for Claude Desktop, Windsurf, or any o
 
 ### Docker with Stdio Configuration
 
+**Dual Provider Configuration:**
+```json
+{
+  "mcpServers": {
+    "mem0": {
+      "command": "docker",
+      "args": ["run", "--rm", "-i", 
+               "-e", "TRANSPORT", 
+               "-e", "PRIMARY_LLM_PROVIDER", 
+               "-e", "PRIMARY_LLM_BASE_URL", 
+               "-e", "PRIMARY_LLM_API_KEY", 
+               "-e", "SECONDARY_LLM_PROVIDER", 
+               "-e", "SECONDARY_LLM_BASE_URL", 
+               "-e", "SECONDARY_LLM_API_KEY", 
+               "-e", "LLM_CHOICE", 
+               "-e", "EMBEDDING_MODEL_CHOICE", 
+               "-e", "DATABASE_URL", 
+               "mcp/mem0"],
+      "env": {
+        "TRANSPORT": "stdio",
+        "PRIMARY_LLM_PROVIDER": "openai",
+        "PRIMARY_LLM_BASE_URL": "https://api.openai.com/v1",
+        "PRIMARY_LLM_API_KEY": "YOUR-OPENAI-API-KEY",
+        "SECONDARY_LLM_PROVIDER": "openrouter",
+        "SECONDARY_LLM_BASE_URL": "https://openrouter.ai/api/v1",
+        "SECONDARY_LLM_API_KEY": "YOUR-OPENROUTER-API-KEY",
+        "LLM_CHOICE": "gpt-4o-mini",
+        "EMBEDDING_MODEL_CHOICE": "text-embedding-3-small",
+        "DATABASE_URL": "YOUR-DATABASE-URL"
+      }
+    }
+  }
+}
+```
+
+**Legacy Single Provider Configuration:**
 ```json
 {
   "mcpServers": {
@@ -200,6 +298,60 @@ Add this server to your MCP configuration for Claude Desktop, Windsurf, or any o
   }
 }
 ```
+
+## Dual Provider Architecture
+
+### How It Works
+
+The dual provider system operates two separate Mem0 instances in parallel:
+
+1. **Primary Provider**: Your main LLM service (e.g., OpenAI)
+2. **Secondary Provider**: Your backup LLM service (e.g., OpenRouter, Ollama)
+
+### Key Features
+
+- **Synchronized Operations**: All memory operations are performed on both providers
+- **Same Model Configuration**: Both providers use identical `LLM_CHOICE` and `EMBEDDING_MODEL_CHOICE`
+- **Separate Vector Collections**: Each provider stores data in separate database collections to prevent conflicts
+- **Automatic Deduplication**: Search and retrieval operations merge and deduplicate results from both providers
+- **Health Monitoring**: Real-time status checking ensures both providers are operational
+- **Graceful Degradation**: If one provider fails, the system continues with the remaining provider
+
+### Benefits
+
+- **High Availability**: System remains functional even if one provider is down
+- **Load Distribution**: Reduces load on individual providers
+- **Cost Optimization**: Use different pricing tiers or providers based on your needs
+- **Provider Diversity**: Reduce dependency on a single service provider
+- **Enhanced Reliability**: Double redundancy for critical memory storage
+
+### Duplicate Prevention System
+
+The system includes intelligent duplicate prevention to avoid storing redundant memories:
+
+#### How It Works
+- **Content Extraction**: Automatically extracts searchable content from various message formats
+- **Exact Matching**: Performs case-insensitive exact content matching
+- **Similarity Analysis**: Uses Jaccard similarity algorithm for fuzzy matching (90% threshold)
+- **Cross-Provider Checking**: Searches both primary and secondary providers for duplicates
+- **Smart Thresholds**: Only performs expensive similarity checks on longer memories (>20 characters)
+
+#### Benefits
+- **Storage Efficiency**: Prevents database bloat from duplicate entries
+- **Cost Savings**: Reduces unnecessary API calls and storage costs
+- **Data Quality**: Maintains clean, non-redundant memory databases
+- **Performance**: Optimized checking algorithms minimize processing overhead
+- **Fail-Safe Design**: If duplicate checking fails, memory is still saved to prevent data loss
+
+## Documentation
+
+For detailed documentation, please refer to the `docs/` folder:
+
+- **[Architecture Guide](docs/architecture.md)**: Detailed system architecture and design patterns
+- **[API Reference](docs/api-reference.md)**: Complete tool and method documentation
+- **[Configuration Guide](docs/configuration.md)**: Comprehensive configuration options
+- **[Development Guide](docs/development.md)**: How to extend and customize the system
+- **[Troubleshooting](docs/troubleshooting.md)**: Common issues and solutions
 
 ## Building Your Own Server
 
